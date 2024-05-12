@@ -1,0 +1,103 @@
+import pygame
+import sys
+import math
+import random
+
+# Dimensiones de la pantalla
+WIDTH, HEIGHT = 800, 600
+# Colores
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+
+# Definir clases y funciones
+
+class Cannon:
+    def __init__(self):
+        self.image = pygame.Surface((50, 50))
+        self.image.fill(BLACK)
+        self.rect = self.image.get_rect()
+        self.rect.bottomleft = (0, HEIGHT)
+        self.angle = 45
+        self.power = 0
+
+    def update(self):
+        mouse_pos = pygame.mouse.get_pos()
+        angle = math.atan2(HEIGHT - mouse_pos[1], mouse_pos[0])
+        self.angle = math.degrees(angle)
+        distance = math.hypot(WIDTH - mouse_pos[0], HEIGHT - mouse_pos[1])
+        self.power = min(distance, 100)
+
+    def draw(self, screen):
+        pygame.draw.rect(screen, BLACK, self.rect)
+        pygame.draw.line(screen, BLACK, self.rect.bottomleft, (self.rect.left, self.rect.bottom - self.power), 5)
+
+class Ragdoll(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = pygame.Surface((20, 40))
+        self.image.fill(WHITE)
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
+        self.velocity = pygame.math.Vector2(0, 0)
+
+    def update(self):
+        self.rect.move_ip(self.velocity)
+
+class Obstacle(pygame.sprite.Sprite):
+    def __init__(self, x, y, width, height, static=True):
+        super().__init__()
+        self.image = pygame.Surface((width, height))
+        self.image.fill(BLACK)
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (x, y)
+        self.static = static
+
+    def draw(self, screen):
+        screen.blit(self.image, self.rect)
+
+# Configuración de la ventana
+screen_width = 800
+screen_height = 600
+screen = pygame.display.set_mode((screen_width, screen_height))
+pygame.display.set_caption("Drag")
+
+# Lista para almacenar los puntos
+points = [(100, 100), (200, 200), (300, 300)]
+
+# Función para dibujar los puntos en pantalla
+def draw_points():
+    for point in points:
+        pygame.draw.circle(screen, RED, point, 5)
+
+# Bucle principal
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:  # Click izquierdo
+                # Verificar si se hizo clic en algún punto para comenzar a arrastrarlo
+                for i, point in enumerate(points):
+                    if pygame.Rect(point[0] - 5, point[1] - 5, 10, 10).collidepoint(event.pos):
+                        selected_point = i
+                        break
+                else:
+                    # Si no se hizo clic en ningún punto, añadir uno nuevo
+                    points.append(event.pos)
+            elif event.button == 3:  # Click derecho
+                # Eliminar el punto más cercano al clic derecho
+                nearest_point = min(points, key=lambda p: ((p[0] - event.pos[0])**2 + (p[1] - event.pos[1])**2)**0.5)
+                points.remove(nearest_point)
+        elif event.type == pygame.MOUSEMOTION:
+            if event.buttons[0]:  # Arrastre con el botón izquierdo del mouse
+                # Actualizar la posición del punto seleccionado
+                if selected_point is not None:
+                    points[selected_point] = event.pos
+
+    # Dibujar en pantalla
+    screen.fill(WHITE)
+    draw_points()
+    pygame.display.flip()
+
+
